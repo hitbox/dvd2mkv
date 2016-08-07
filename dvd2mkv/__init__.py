@@ -32,20 +32,32 @@ def commarange(*args):
     return commafy(strrange(*args))
 
 def handbrake(input, dry=False, **kwargs):
-    hbopts = CommandOptions(kwargs)
+    hbopts = CommandOptions({
+        'preset': 'High Profile',
+        'x264-preset': 'slow',
+        'x264-tune': 'film',
 
-    hbopts.setdefault('preset', 'High Profile')
-    hbopts.setdefault('drc', '3.0')
-    hbopts.setdefault('subtitle', commarange(1, 11))
-    hbopts.setdefault('audio', commarange(1, 11))
-    hbopts.setdefault('markers', True)
-    hbopts.setdefault('optimize', True)
-    hbopts.setdefault('two-pass', True)
-    hbopts.setdefault('turbo', True)
-    hbopts.setdefault('main-feature', True)
+        'drc': '3.0',
+        'subtitle': commarange(1, 11),
+        'audio': commarange(1, 11),
+        'markers': True,
+        'optimize': True,
+        'two-pass': True,
+        'turbo': True,
+        'main-feature': True,
 
-    hbopts['input'] = input
-    hbopts['output'] = '%s.mkv' % (input.rstrip('/'), )
+        'input': input,
+        'output': '%s.mkv' % (input.rstrip('/'), ),
+    })
+
+    for key, value in kwargs.items():
+        hbopts[key] = value
+
+    if not hbopts['output'].endswith('.mkv'):
+        hbopts['output'] += '.mkv'
+
+    if 'main-feature' in hbopts and 'title' in hbopts:
+        del hbopts['main-feature']
 
     cmd = ['HandBrakeCLI'] + hbopts.options_list()
     if dry:
@@ -73,17 +85,21 @@ def parse_args():
     _a('inputs', nargs='+', type=directory,
        help='The directories to encode.')
     _a('-n', '--dry', action='store_true',
-       help='Dry run. Just print HandBrakeCLI command line.')
+       help='Dry run. Just print HandBrakeCLI command line. Must appear before `inputs` list.')
     _a('extra', nargs=argparse.REMAINDER, action=ExtraAction,
        help='Extra HandBrakeCLI options. Must be at the end.')
 
-    return parser.parse_args()
+    args = parser.parse_args()
+    return (parser, args)
 
 def main():
     """
     Encode dvd dirs with favorite HandBrakeCLI settings.
     """
-    args = parse_args()
+    parser, args = parse_args()
+
+    if 'output' in args.extra and len(args.inputs) > 1:
+        parser.exit('Cannot accept more than one input if the output option is given.')
 
     for dirname in args.inputs:
         handbrake(dirname, args.dry, **args.extra)
