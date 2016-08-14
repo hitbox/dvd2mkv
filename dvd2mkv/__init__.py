@@ -81,6 +81,10 @@ class ExtraAction(argparse.Action):
 
 def parse_args():
     parser = argparse.ArgumentParser(description=main.__doc__)
+
+    # default subparsers?
+    # show defaults in help
+
     _a = parser.add_argument
     _a('inputs', nargs='+', type=directory,
        help='The directories to encode.')
