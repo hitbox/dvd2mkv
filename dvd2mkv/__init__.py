@@ -1,8 +1,9 @@
-#!/usr/bin/env python
 import argparse
 import collections
 import os
 import subprocess
+
+from argparse import ArgumentParser
 
 def istruefalse(thing):
     return thing is True or thing is False
@@ -23,23 +24,16 @@ class CommandOptions(collections.OrderedDict):
                 args.append('%s' % value)
         return args
 
-commafy = ','.join
-
-def strrange(*args):
-    return map(str, range(*args))
-
-def commarange(*args):
-    return commafy(strrange(*args))
 
 def handbrake(input, dry=False, **kwargs):
     hbopts = CommandOptions({
-        'preset': 'High Profile',
+        'preset': 'Super HQ 1080p30 Surround',
         'x264-preset': 'slow',
         'x264-tune': 'film',
 
         'drc': '3.0',
-        'subtitle': commarange(1, 11),
-        'audio': commarange(1, 11),
+        'subtitle': ','.join(map(str,range(1,11))),
+        'audio': ','.join(map(str,range(1,11))),
         'markers': True,
         'optimize': True,
         'two-pass': True,
@@ -79,31 +73,27 @@ class ExtraAction(argparse.Action):
         setattr(namespace, self.dest, extra)
 
 
-def parse_args():
-    parser = argparse.ArgumentParser(description=main.__doc__)
-
-    # default subparsers?
-    # show defaults in help
-
-    _a = parser.add_argument
-    _a('inputs', nargs='+', type=directory,
-       help='The directories to encode.')
-    _a('-n', '--dry', action='store_true',
-       help='Dry run. Just print HandBrakeCLI command line. Must appear before `inputs` list.')
-    _a('extra', nargs=argparse.REMAINDER, action=ExtraAction,
-       help='Extra HandBrakeCLI options. Must be at the end.')
-
-    args = parser.parse_args()
-    return (parser, args)
-
-def main():
+def main(argv=None):
     """
     Encode dvd dirs with favorite HandBrakeCLI settings.
     """
-    parser, args = parse_args()
+    parser = argparse.ArgumentParser(prog=__name__, description=main.__doc__)
+
+    #parser.add_argument('inputs', nargs='+', type=directory,
+    #                    help='The directories to encode.')
+    parser.add_argument('input')
+    parser.add_argument('-n', '--dry', action='store_true',
+                        help='Dry run. Just print HandBrakeCLI command line.'
+                        ' Must appear before `inputs` list.')
+    parser.add_argument('extra', nargs=argparse.REMAINDER, action=ExtraAction,
+                        help='Extra HandBrakeCLI options. Must be at the end.'
+                        ' Does NOT capture flags.')
+
+    args = parser.parse_args(argv)
 
     if 'output' in args.extra and len(args.inputs) > 1:
         parser.exit('Cannot accept more than one input if the output option is given.')
 
-    for dirname in args.inputs:
-        handbrake(dirname, args.dry, **args.extra)
+    #for dirname in args.inputs:
+    #    handbrake(dirname, args.dry, **args.extra)
+    handbrake(args.input, args.dry, **args.extra)
